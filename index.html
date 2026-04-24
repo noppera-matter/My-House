@@ -52,6 +52,15 @@
         <!-- Map Container -->
         <div id="map-container">
             <div id="map"></div>
+            <!-- Map Search Bar -->
+            <div id="map-search-bar">
+                <div class="map-search-input-wrap">
+                    <span class="map-search-icon">🔍</span>
+                    <input type="text" id="map-search-input" placeholder="주소·장소 검색 (예: 해운대, 강남역)">
+                    <button id="btn-map-search-clear" class="map-search-clear hidden">&times;</button>
+                </div>
+                <div id="map-search-results" class="map-search-results hidden"></div>
+            </div>
             <div id="map-overlay">
                 <button id="btn-locate" class="map-btn" title="내 위치">
                     <span>📍</span>

@@ -31,7 +31,7 @@ const API = (() => {
     // 기본: corsproxy.io (무료) / 사용자 변경 가능
     function getProxyUrl() {
         const k = getKeys();
-        return k.proxyUrl || 'https://corsproxy.io/?url=';
+        return k.proxyUrl || 'https://corsproxy.io/?';
     }
 
     async function apiFetch(url) {
@@ -140,6 +140,7 @@ const API = (() => {
     // 최근 N개월치 실거래가를 가져오는 헬퍼
     async function getRecentTrades(regionCode, months = 6) {
         const results = [];
+        const errors = [];
         const now = new Date();
 
         const promises = [];
@@ -149,11 +150,17 @@ const API = (() => {
             promises.push(
                 getAptTrade(regionCode, ym)
                     .then(items => results.push(...items))
-                    .catch(() => {}) // 개별 월 실패 무시
+                    .catch(err => errors.push({ month: ym, error: err.message }))
             );
         }
 
         await Promise.all(promises);
+
+        // 전부 실패한 경우 에러 throw
+        if (results.length === 0 && errors.length > 0) {
+            throw new Error(`API 호출 실패 (${errors.length}건): ${errors[0].error}`);
+        }
+
         return results.sort((a, b) => {
             const da = `${a.dealYear}${String(a.dealMonth).padStart(2,'0')}${String(a.dealDay).padStart(2,'0')}`;
             const db = `${b.dealYear}${String(b.dealMonth).padStart(2,'0')}${String(b.dealDay).padStart(2,'0')}`;
@@ -260,6 +267,23 @@ const API = (() => {
         }));
     }
 
+    // ========== 주소 검색 (Nominatim - 무료, 키 불필요) ==========
+    async function searchLocation(query) {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&limit=8&accept-language=ko`;
+        const res = await fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) throw new Error('검색 실패');
+        const data = await res.json();
+        return data.map(item => ({
+            name: item.display_name,
+            shortName: item.display_name.split(',').slice(0, 3).join(', '),
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            type: item.type,
+        }));
+    }
+
     // ========== Public Interface ==========
     return {
         getKeys,
@@ -268,6 +292,7 @@ const API = (() => {
         getServiceKey,
         getProxyUrl,
         searchRegion,
+        searchLocation,
         POPULAR_REGIONS,
         getAptTrade,
         getRecentTrades,

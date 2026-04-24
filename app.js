@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBadges();
     bindEvents();
     bindAPIEvents();
+    bindMapSearchEvents();
     startLocationWatch();
     registerSW();
     initAPIState();
@@ -367,6 +368,88 @@ function bindEvents() {
 function cancelAddMode() {
     addingSpotMode = false; document.getElementById('btn-add-spot').classList.remove('active');
     if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; } tempLatLng = null;
+}
+
+// ========== Map Location Search (Nominatim - 무료, 키 불필요) ==========
+let searchTimeout = null;
+
+function bindMapSearchEvents() {
+    const input = document.getElementById('map-search-input');
+    const clearBtn = document.getElementById('btn-map-search-clear');
+    const resultsDiv = document.getElementById('map-search-results');
+
+    // Debounced input
+    input.addEventListener('input', () => {
+        const q = input.value.trim();
+        clearBtn.classList.toggle('hidden', q.length === 0);
+        
+        clearTimeout(searchTimeout);
+        if (q.length < 2) { resultsDiv.classList.add('hidden'); return; }
+        
+        searchTimeout = setTimeout(() => performMapSearch(q), 400);
+    });
+
+    // Enter key
+    input.addEventListener('keypress', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            const q = input.value.trim();
+            if (q.length >= 2) performMapSearch(q);
+        }
+    });
+
+    // Clear
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.classList.add('hidden');
+        resultsDiv.classList.add('hidden');
+        input.focus();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#map-search-bar')) resultsDiv.classList.add('hidden');
+    });
+}
+
+async function performMapSearch(query) {
+    const resultsDiv = document.getElementById('map-search-results');
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = '<div class="map-search-loading">🔍 검색 중...</div>';
+
+    try {
+        const results = await API.searchLocation(query);
+        if (results.length === 0) {
+            resultsDiv.innerHTML = '<div class="map-search-loading">검색 결과가 없습니다</div>';
+            return;
+        }
+
+        resultsDiv.innerHTML = results.map((r, i) => `
+            <div class="map-search-item" data-idx="${i}" data-lat="${r.lat}" data-lng="${r.lng}">
+                <span class="map-search-item-icon">📍</span>
+                <div class="map-search-item-text">
+                    ${r.shortName}
+                    <div class="map-search-item-sub">${r.name}</div>
+                </div>
+            </div>`).join('');
+
+        resultsDiv.querySelectorAll('.map-search-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const lat = parseFloat(el.dataset.lat);
+                const lng = parseFloat(el.dataset.lng);
+                const name = el.querySelector('.map-search-item-text').textContent.trim().split('\n')[0];
+                
+                map.flyTo([lat, lng], 16, { duration: 1 });
+                resultsDiv.classList.add('hidden');
+                document.getElementById('map-search-input').value = name;
+                
+                showToast(`📍 ${name} 으로 이동`);
+            });
+        });
+    } catch (err) {
+        resultsDiv.innerHTML = `<div class="map-search-loading">❌ 검색 오류: ${err.message}</div>`;
+    }
 }
 
 // ========== Fog of War ==========
