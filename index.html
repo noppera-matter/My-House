@@ -43,13 +43,15 @@
                     <span class="badge-icon">📍</span>
                     <span class="badge-num">0</span>
                 </div>
+                <button id="btn-settings" class="header-settings" title="설정">
+                    <span>⚙️</span>
+                </button>
             </div>
         </header>
 
         <!-- Map Container -->
         <div id="map-container">
             <div id="map"></div>
-            <!-- Map Overlay Info -->
             <div id="map-overlay">
                 <button id="btn-locate" class="map-btn" title="내 위치">
                     <span>📍</span>
@@ -76,10 +78,12 @@
         <div id="bottom-sheet" class="collapsed">
             <div class="sheet-handle" id="sheet-handle"><div class="handle-bar"></div></div>
             
-            <!-- Tab Navigation -->
+            <!-- Tab Navigation - 5 tabs -->
             <div class="tab-nav">
-                <button class="tab-btn active" data-tab="spots">🗺️ 관심매물</button>
-                <button class="tab-btn" data-tab="checklist">📋 체크리스트</button>
+                <button class="tab-btn active" data-tab="spots">🗺️ 매물</button>
+                <button class="tab-btn" data-tab="trade">💰 실거래</button>
+                <button class="tab-btn" data-tab="subscription">🏗️ 청약</button>
+                <button class="tab-btn" data-tab="checklist">📋 체크</button>
                 <button class="tab-btn" data-tab="cards">🃏 카드</button>
             </div>
 
@@ -97,15 +101,102 @@
                 </div>
             </div>
 
+            <!-- Tab: Real Trade Price -->
+            <div class="tab-content" id="tab-trade">
+                <div class="tab-header">
+                    <h2>💰 아파트 실거래가</h2>
+                </div>
+                <!-- Region Selector -->
+                <div class="api-search-box">
+                    <div class="search-row">
+                        <select id="trade-region-select" class="api-select">
+                            <option value="">지역 선택 (빠른선택)</option>
+                        </select>
+                        <button id="btn-trade-search" class="btn-api-search">조회</button>
+                    </div>
+                    <div class="search-row">
+                        <input type="text" id="trade-region-input" class="api-input" placeholder="직접 검색 (예: 해운대, 강남)">
+                        <button id="btn-region-search" class="btn-api-search">🔍</button>
+                    </div>
+                    <div id="region-search-results" class="region-results hidden"></div>
+                    <!-- Month Range -->
+                    <div class="search-row range-row">
+                        <label>조회 기간:</label>
+                        <select id="trade-months">
+                            <option value="3">최근 3개월</option>
+                            <option value="6" selected>최근 6개월</option>
+                            <option value="12">최근 12개월</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Loading -->
+                <div id="trade-loading" class="api-loading hidden">
+                    <div class="loading-spinner"></div>
+                    <p>실거래가 데이터를 불러오는 중...</p>
+                </div>
+                <!-- Results -->
+                <div id="trade-results" class="hidden">
+                    <!-- Chart -->
+                    <div class="chart-section">
+                        <div class="chart-header">
+                            <h3>📈 가격 추이</h3>
+                            <select id="chart-apt-filter" class="api-select-sm">
+                                <option value="">전체 아파트</option>
+                            </select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="price-chart" width="360" height="180"></canvas>
+                        </div>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="legend-dot avg"></span>평균</span>
+                            <span class="legend-item"><span class="legend-dot max"></span>최고</span>
+                            <span class="legend-item"><span class="legend-dot min"></span>최저</span>
+                        </div>
+                    </div>
+                    <!-- Summary Stats -->
+                    <div class="trade-stats" id="trade-stats"></div>
+                    <!-- Trade List -->
+                    <div class="trade-list-header">
+                        <h3>최근 거래 내역</h3>
+                        <span id="trade-count" class="spot-count">0건</span>
+                    </div>
+                    <div id="trade-list" class="list-container"></div>
+                </div>
+                <!-- No API Key -->
+                <div id="trade-no-key" class="hidden">
+                    <div class="empty-state">
+                        <span class="empty-icon">🔑</span>
+                        <p>API 키를 먼저 등록해 주세요<br><small>우측 상단 ⚙️ → API 키 설정</small></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Subscription Info -->
+            <div class="tab-content" id="tab-subscription">
+                <div class="tab-header">
+                    <h2>🏗️ 청약 분양정보</h2>
+                    <button id="btn-sub-refresh" class="btn-small">새로고침</button>
+                </div>
+                <div id="sub-loading" class="api-loading hidden">
+                    <div class="loading-spinner"></div>
+                    <p>청약 정보를 불러오는 중...</p>
+                </div>
+                <div id="sub-list" class="list-container"></div>
+                <div id="sub-no-key" class="hidden">
+                    <div class="empty-state">
+                        <span class="empty-icon">🔑</span>
+                        <p>API 키를 먼저 등록해 주세요<br><small>우측 상단 ⚙️ → API 키 설정</small></p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab: Checklist -->
             <div class="tab-content" id="tab-checklist">
                 <div class="tab-header">
                     <h2>임장 체크리스트</h2>
                     <button id="btn-reset-checklist" class="btn-small">초기화</button>
                 </div>
-                <div id="checklist-container" class="list-container">
-                    <!-- Checklist categories will be rendered by JS -->
-                </div>
+                <div id="checklist-container" class="list-container"></div>
             </div>
 
             <!-- Tab: Cards -->
@@ -197,10 +288,62 @@
         </div>
     </div>
 
+    <!-- Modal: Settings -->
+    <div id="modal-settings" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ API 키 설정</h3>
+                <button class="modal-close" id="modal-close-settings">&times;</button>
+            </div>
+            <div class="settings-info">
+                <p>💡 <a href="https://www.data.go.kr" target="_blank" rel="noopener">공공데이터포털</a>에서 발급받은 API 키(인코딩)를 입력하세요.</p>
+            </div>
+            <form id="form-settings">
+                <div class="form-group">
+                    <label for="key-trade">
+                        ① 실거래가 API 키
+                        <span class="key-status" id="status-trade">미등록</span>
+                    </label>
+                    <input type="text" id="key-trade" placeholder="국토교통부_아파트매매 실거래 상세 자료">
+                    <small class="form-hint">검색: "아파트 매매 실거래"</small>
+                </div>
+                <div class="form-group">
+                    <label for="key-region">
+                        ② 법정동코드 API 키
+                        <span class="key-status" id="status-region">미등록</span>
+                    </label>
+                    <input type="text" id="key-region" placeholder="행정안전부_행정표준코드_법정동코드">
+                    <small class="form-hint">검색: "법정동코드"</small>
+                </div>
+                <div class="form-group">
+                    <label for="key-subscription">
+                        ③ 청약 분양정보 API 키
+                        <span class="key-status" id="status-sub">미등록</span>
+                    </label>
+                    <input type="text" id="key-subscription" placeholder="한국부동산원_청약홈 분양정보 조회 서비스">
+                    <small class="form-hint">검색: "청약홈"</small>
+                </div>
+                <div class="form-group">
+                    <label for="key-proxy">
+                        CORS 프록시 URL <span class="optional">(선택)</span>
+                    </label>
+                    <input type="text" id="key-proxy" placeholder="기본: https://corsproxy.io/?url=">
+                    <small class="form-hint">공공 API는 브라우저 직접 호출이 불가하여 프록시가 필요합니다</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="btn-cancel-settings">취소</button>
+                    <button type="submit" class="btn-primary">💾 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="api.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

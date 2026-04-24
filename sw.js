@@ -1,9 +1,10 @@
-const CACHE_NAME = 'myhouse-v1';
+const CACHE_NAME = 'myhouse-v2';
 const ASSETS = [
     './',
     './index.html',
     './style.css',
     './app.js',
+    './api.js',
     './manifest.json',
 ];
 
