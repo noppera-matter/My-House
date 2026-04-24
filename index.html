@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="나를 위한 부동산 임장 도우미 - 게임처럼 현장을 방문하고 나만의 부동산 지도를 완성하세요">
+    <meta name="theme-color" content="#0f0f23">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>My House - 나만의 임장 도우미</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="splash-icon">🏠</div>
+            <h1 class="splash-title">My House</h1>
+            <p class="splash-sub">나를 위한, 내가 필요한 집</p>
+            <div class="splash-loader"><div class="loader-bar"></div></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden">
+        <!-- Header -->
+        <header id="app-header">
+            <div class="header-left">
+                <span class="header-icon">🏠</span>
+                <h1 class="header-title">My House</h1>
+            </div>
+            <div class="header-right">
+                <div class="header-badge" id="badge-count" title="수집한 카드">
+                    <span class="badge-icon">🃏</span>
+                    <span class="badge-num">0</span>
+                </div>
+                <div class="header-badge" id="visit-count" title="방문 완료">
+                    <span class="badge-icon">📍</span>
+                    <span class="badge-num">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Map Container -->
+        <div id="map-container">
+            <div id="map"></div>
+            <!-- Map Overlay Info -->
+            <div id="map-overlay">
+                <button id="btn-locate" class="map-btn" title="내 위치">
+                    <span>📍</span>
+                </button>
+                <button id="btn-add-spot" class="map-btn" title="관심 장소 추가">
+                    <span>➕</span>
+                </button>
+                <button id="btn-fog-toggle" class="map-btn" title="안개 모드">
+                    <span>🌫️</span>
+                </button>
+            </div>
+            <!-- Visit Proximity Alert -->
+            <div id="proximity-alert" class="hidden">
+                <div class="proximity-content">
+                    <div class="proximity-pulse"></div>
+                    <span class="proximity-icon">🎯</span>
+                    <p class="proximity-text">근처에 관심 매물이 있어요!</p>
+                    <button id="btn-checkin" class="btn-checkin">체크인하기 🏆</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Sheet -->
+        <div id="bottom-sheet" class="collapsed">
+            <div class="sheet-handle" id="sheet-handle"><div class="handle-bar"></div></div>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="spots">🗺️ 관심매물</button>
+                <button class="tab-btn" data-tab="checklist">📋 체크리스트</button>
+                <button class="tab-btn" data-tab="cards">🃏 카드</button>
+            </div>
+
+            <!-- Tab: Spots List -->
+            <div class="tab-content active" id="tab-spots">
+                <div class="tab-header">
+                    <h2>관심 매물 목록</h2>
+                    <span class="spot-count" id="spot-total">0건</span>
+                </div>
+                <div id="spots-list" class="list-container">
+                    <div class="empty-state">
+                        <span class="empty-icon">🏘️</span>
+                        <p>지도에서 ➕ 버튼으로<br>관심 장소를 추가해 보세요!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Checklist -->
+            <div class="tab-content" id="tab-checklist">
+                <div class="tab-header">
+                    <h2>임장 체크리스트</h2>
+                    <button id="btn-reset-checklist" class="btn-small">초기화</button>
+                </div>
+                <div id="checklist-container" class="list-container">
+                    <!-- Checklist categories will be rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Cards -->
+            <div class="tab-content" id="tab-cards">
+                <div class="tab-header">
+                    <h2>수집한 임장 카드</h2>
+                    <span class="spot-count" id="card-total">0장</span>
+                </div>
+                <div id="cards-grid" class="cards-container">
+                    <div class="empty-state">
+                        <span class="empty-icon">🃏</span>
+                        <p>매물 근처에서 체크인하면<br>카드를 획득할 수 있어요!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Spot -->
+    <div id="modal-add-spot" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📌 관심 장소 추가</h3>
+                <button class="modal-close" id="modal-close-spot">&times;</button>
+            </div>
+            <form id="form-add-spot">
+                <div class="form-group">
+                    <label for="spot-name">장소명 <span class="required">*</span></label>
+                    <input type="text" id="spot-name" placeholder="예: 해운대 XX아파트" required>
+                </div>
+                <div class="form-group">
+                    <label for="spot-type">유형</label>
+                    <select id="spot-type">
+                        <option value="apartment">🏢 아파트</option>
+                        <option value="villa">🏘️ 빌라/연립</option>
+                        <option value="officetel">🏬 오피스텔</option>
+                        <option value="house">🏡 단독주택</option>
+                        <option value="development">🚧 개발예정지</option>
+                        <option value="other">📍 기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="spot-price">가격 (만원)</label>
+                    <input type="text" id="spot-price" placeholder="예: 30000">
+                </div>
+                <div class="form-group">
+                    <label for="spot-note">메모</label>
+                    <textarea id="spot-note" rows="3" placeholder="특이사항, 장단점 등"></textarea>
+                </div>
+                <div class="form-group coords-display">
+                    <span class="coords-label">📍 좌표:</span>
+                    <span id="spot-coords">위치를 선택해 주세요</span>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="btn-cancel-spot">취소</button>
+                    <button type="submit" class="btn-primary">추가하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Spot Detail -->
+    <div id="modal-spot-detail" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="detail-title">장소 상세</h3>
+                <button class="modal-close" id="modal-close-detail">&times;</button>
+            </div>
+            <div id="detail-body"></div>
+            <div class="form-actions">
+                <button class="btn-danger" id="btn-delete-spot">삭제</button>
+                <button class="btn-primary" id="btn-navigate-spot">🧭 길찾기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Card Acquired -->
+    <div id="modal-card" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-card-content">
+            <div class="card-acquired-animation">
+                <div class="card-sparkle">✨</div>
+                <h3>🎉 카드 획득!</h3>
+            </div>
+            <div id="acquired-card" class="game-card"></div>
+            <button class="btn-primary btn-full" id="btn-close-card">닫기</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

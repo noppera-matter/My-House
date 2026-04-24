@@ -1,0 +1,26 @@
+{
+    "name": "My House",
+    "short_name": "MyHouse",
+    "description": "나를 위한 부동산 임장 도우미 - 게임처럼 현장을 방문하고 나만의 부동산 지도를 완성하세요",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0f0f23",
+    "theme_color": "#0f0f23",
+    "orientation": "portrait",
+    "lang": "ko",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f23'/><text x='50%25' y='55%25' text-anchor='middle' dominant-baseline='central' font-size='60'>🏠</text></svg>",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f23'/><text x='50%25' y='55%25' text-anchor='middle' dominant-baseline='central' font-size='60'>🏠</text></svg>",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["lifestyle", "utilities"]
+}
