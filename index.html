@@ -297,32 +297,17 @@
                 <button class="modal-close" id="modal-close-settings">&times;</button>
             </div>
             <div class="settings-info">
-                <p>💡 <a href="https://www.data.go.kr" target="_blank" rel="noopener">공공데이터포털</a>에서 발급받은 API 키(인코딩)를 입력하세요.</p>
+                <p>💡 <a href="https://www.data.go.kr" target="_blank" rel="noopener">공공데이터포털</a>에서 발급받은 <strong>일반 인증키(Encoding)</strong>를 입력하세요.<br>
+                <small>하나의 키로 실거래가·법정동코드·청약정보 모두 사용됩니다.</small></p>
             </div>
             <form id="form-settings">
                 <div class="form-group">
-                    <label for="key-trade">
-                        ① 실거래가 API 키
-                        <span class="key-status" id="status-trade">미등록</span>
+                    <label for="key-service">
+                        🔑 공공데이터포털 일반 인증키 (Encoding)
+                        <span class="key-status" id="status-key">미등록</span>
                     </label>
-                    <input type="text" id="key-trade" placeholder="국토교통부_아파트매매 실거래 상세 자료">
-                    <small class="form-hint">검색: "아파트 매매 실거래"</small>
-                </div>
-                <div class="form-group">
-                    <label for="key-region">
-                        ② 법정동코드 API 키
-                        <span class="key-status" id="status-region">미등록</span>
-                    </label>
-                    <input type="text" id="key-region" placeholder="행정안전부_행정표준코드_법정동코드">
-                    <small class="form-hint">검색: "법정동코드"</small>
-                </div>
-                <div class="form-group">
-                    <label for="key-subscription">
-                        ③ 청약 분양정보 API 키
-                        <span class="key-status" id="status-sub">미등록</span>
-                    </label>
-                    <input type="text" id="key-subscription" placeholder="한국부동산원_청약홈 분양정보 조회 서비스">
-                    <small class="form-hint">검색: "청약홈"</small>
+                    <input type="text" id="key-service" placeholder="발급받은 인증키를 붙여넣기 하세요">
+                    <small class="form-hint">마이페이지 → 활용신청 현황 → 일반 인증키(Encoding) 복사</small>
                 </div>
                 <div class="form-group">
                     <label for="key-proxy">

@@ -19,7 +19,11 @@ const API = (() => {
 
     function hasKeys() {
         const k = getKeys();
-        return !!(k.tradeKey && k.regionKey && k.subscriptionKey);
+        return !!k.serviceKey;
+    }
+
+    function getServiceKey() {
+        return getKeys().serviceKey || '';
     }
 
     // ========== Proxy / Fetch ==========
@@ -45,11 +49,11 @@ const API = (() => {
     // ========== 법정동코드 API ==========
     // 행정안전부_행정표준코드_법정동코드
     async function searchRegion(keyword) {
-        const keys = getKeys();
-        if (!keys.regionKey) throw new Error('법정동코드 API 키가 설정되지 않았습니다.');
+        const key = getServiceKey();
+        if (!key) throw new Error('API 키가 설정되지 않았습니다. ⚙️ 설정에서 입력해 주세요.');
 
         const url = `https://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList`
-            + `?serviceKey=${keys.regionKey}`
+            + `?serviceKey=${key}`
             + `&locatadd_nm=${encodeURIComponent(keyword)}`
             + `&type=json`
             + `&pageNo=1`
@@ -102,11 +106,11 @@ const API = (() => {
     // ========== 실거래가 API ==========
     // 국토교통부_아파트매매 실거래 상세 자료
     async function getAptTrade(regionCode, dealYearMonth) {
-        const keys = getKeys();
-        if (!keys.tradeKey) throw new Error('실거래가 API 키가 설정되지 않았습니다.');
+        const key = getServiceKey();
+        if (!key) throw new Error('API 키가 설정되지 않았습니다. ⚙️ 설정에서 입력해 주세요.');
 
         const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev`
-            + `?serviceKey=${keys.tradeKey}`
+            + `?serviceKey=${key}`
             + `&LAWD_CD=${regionCode}`
             + `&DEAL_YMD=${dealYearMonth}`
             + `&pageNo=1`
@@ -193,11 +197,11 @@ const API = (() => {
     // ========== 청약홈 분양정보 API ==========
     // 한국부동산원_청약홈 분양정보 조회 서비스
     async function getSubscriptionInfo(page = 1) {
-        const keys = getKeys();
-        if (!keys.subscriptionKey) throw new Error('청약 분양정보 API 키가 설정되지 않았습니다.');
+        const key = getServiceKey();
+        if (!key) throw new Error('API 키가 설정되지 않았습니다. ⚙️ 설정에서 입력해 주세요.');
 
         const url = `https://apis.data.go.kr/1613000/OpenStanReginInfoService/getAPTLttotPblancDetail`
-            + `?serviceKey=${keys.subscriptionKey}`
+            + `?serviceKey=${key}`
             + `&pageNo=${page}`
             + `&numOfRows=10`
             + `&type=json`;
@@ -231,9 +235,9 @@ const API = (() => {
 
     // 대체 엔드포인트
     async function getSubscriptionInfoFallback(page = 1) {
-        const keys = getKeys();
+        const key = getServiceKey();
         const url = `https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail`
-            + `?serviceKey=${keys.subscriptionKey}`
+            + `?serviceKey=${key}`
             + `&page=${page}`
             + `&perPage=10`;
 
@@ -261,6 +265,7 @@ const API = (() => {
         getKeys,
         saveKeys,
         hasKeys,
+        getServiceKey,
         getProxyUrl,
         searchRegion,
         POPULAR_REGIONS,

@@ -391,17 +391,14 @@ function initAPIState() {
 }
 
 function checkAPIKeyState() {
-    const keys = API.getKeys();
-    const hasTrade = !!keys.tradeKey;
-    const hasRegion = !!keys.regionKey;
-    const hasSub = !!keys.subscriptionKey;
+    const hasKey = API.hasKeys();
 
     // Trade tab
-    document.getElementById('trade-no-key').classList.toggle('hidden', hasTrade);
-    document.querySelector('.api-search-box')?.classList.toggle('hidden', !hasTrade);
+    document.getElementById('trade-no-key').classList.toggle('hidden', hasKey);
+    document.querySelector('.api-search-box')?.classList.toggle('hidden', !hasKey);
 
     // Subscription tab
-    document.getElementById('sub-no-key').classList.toggle('hidden', hasSub);
+    document.getElementById('sub-no-key').classList.toggle('hidden', hasKey);
 }
 
 function populateRegionDropdown() {
@@ -700,15 +697,11 @@ async function fetchSubscriptionInfo() {
 // ========== Settings Modal ==========
 function openSettingsModal() {
     const keys = API.getKeys();
-    document.getElementById('key-trade').value = keys.tradeKey || '';
-    document.getElementById('key-region').value = keys.regionKey || '';
-    document.getElementById('key-subscription').value = keys.subscriptionKey || '';
+    document.getElementById('key-service').value = keys.serviceKey || '';
     document.getElementById('key-proxy').value = keys.proxyUrl || '';
 
-    // Update status badges
-    updateKeyStatus('status-trade', !!keys.tradeKey);
-    updateKeyStatus('status-region', !!keys.regionKey);
-    updateKeyStatus('status-sub', !!keys.subscriptionKey);
+    // Update status badge
+    updateKeyStatus('status-key', !!keys.serviceKey);
 
     openModal('modal-settings');
 }
@@ -721,9 +714,7 @@ function updateKeyStatus(elId, registered) {
 
 function saveAPIKeys() {
     const keys = {
-        tradeKey: document.getElementById('key-trade').value.trim(),
-        regionKey: document.getElementById('key-region').value.trim(),
-        subscriptionKey: document.getElementById('key-subscription').value.trim(),
+        serviceKey: document.getElementById('key-service').value.trim(),
         proxyUrl: document.getElementById('key-proxy').value.trim() || undefined,
     };
     API.saveKeys(keys);
