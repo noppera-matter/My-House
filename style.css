@@ -273,7 +273,10 @@ html, body {
     border-color: var(--accent-primary) !important;
 }
 
-.leaflet-tile-pane { filter: brightness(0.7) saturate(0.8) hue-rotate(10deg); }
+/* Google Maps Dark Mode Filter */
+.dark-map-tiles {
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
 
 /* Map Search Bar - 독립 고정 레이어 */
 #map-search-bar {

@@ -82,10 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function initMap() {
     map = L.map('map', { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap · © CARTO',
-        subdomains: 'abcd',
+    // Google Maps Tile (가장 빠름, 한국 지원 완벽)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        attribution: '© Google Maps',
         maxZoom: 20,
+        className: 'dark-map-tiles' // 다크 모드용 필터 클래스 추가
     }).addTo(map);
     map.on('click', (e) => { if (addingSpotMode) setTempMarker(e.latlng); });
 }
