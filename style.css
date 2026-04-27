@@ -278,34 +278,41 @@ html, body {
 /* Map Search Bar */
 #map-search-bar {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    right: 64px;
+    top: 14px;
+    left: 14px;
+    right: 62px;
     z-index: 500;
 }
 
 .map-search-input-wrap {
     display: flex;
     align-items: center;
-    background: var(--bg-glass);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-color);
-    border-radius: 24px;
-    padding: 0 14px;
-    box-shadow: var(--shadow-md);
+    background: rgba(22, 22, 50, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1.5px solid var(--accent-primary);
+    border-radius: 28px;
+    padding: 0 16px;
+    box-shadow: var(--shadow-md), 0 0 12px rgba(108, 92, 231, 0.25);
     transition: var(--transition-fast);
+    animation: searchBarGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes searchBarGlow {
+    0% { box-shadow: var(--shadow-md), 0 0 8px rgba(108, 92, 231, 0.15); }
+    100% { box-shadow: var(--shadow-md), 0 0 16px rgba(108, 92, 231, 0.35); }
 }
 
 .map-search-input-wrap:focus-within {
-    border-color: var(--accent-primary);
-    box-shadow: var(--shadow-glow);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 24px rgba(108, 92, 231, 0.5), var(--shadow-md);
+    animation: none;
 }
 
 .map-search-icon {
-    font-size: 16px;
+    font-size: 18px;
     flex-shrink: 0;
-    margin-right: 8px;
+    margin-right: 10px;
 }
 
 #map-search-input {
@@ -313,16 +320,17 @@ html, body {
     border: none;
     background: transparent;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 15px;
     font-family: inherit;
-    padding: 10px 0;
+    padding: 13px 0;
     outline: none;
     min-width: 0;
 }
 
 #map-search-input::placeholder {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 13px;
+    letter-spacing: 0.3px;
 }
 
 .map-search-clear {
