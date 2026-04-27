@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myhouse-v2';
+const CACHE_NAME = 'myhouse-v3';
 const ASSETS = [
     './',
     './index.html',
@@ -8,7 +8,7 @@ const ASSETS = [
     './manifest.json',
 ];
 
-// Install: cache core assets
+// Install: cache core assets + 즉시 활성화
 self.addEventListener('install', (e) => {
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
@@ -16,7 +16,7 @@ self.addEventListener('install', (e) => {
     self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: 이전 캐시 전부 삭제 + 즉시 제어
 self.addEventListener('activate', (e) => {
     e.waitUntil(
         caches.keys().then((keys) =>
@@ -28,32 +28,19 @@ self.addEventListener('activate', (e) => {
     self.clients.claim();
 });
 
-// Fetch: network-first for tiles/CDN, cache-first for app assets
+// Fetch: Network-first 전략 (항상 최신 파일 우선)
 self.addEventListener('fetch', (e) => {
-    const url = new URL(e.request.url);
-
-    // Network-first for external resources (map tiles, CDN)
-    if (url.origin !== location.origin) {
-        e.respondWith(
-            fetch(e.request)
-                .then((res) => {
-                    const clone = res.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-                    return res;
-                })
-                .catch(() => caches.match(e.request))
-        );
-        return;
-    }
-
-    // Cache-first for app assets
     e.respondWith(
-        caches.match(e.request).then((cached) => {
-            return cached || fetch(e.request).then((res) => {
+        fetch(e.request)
+            .then((res) => {
+                // 성공하면 캐시 업데이트 후 반환
                 const clone = res.clone();
                 caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
                 return res;
-            });
-        })
+            })
+            .catch(() => {
+                // 오프라인이면 캐시에서 반환
+                return caches.match(e.request);
+            })
     );
 });

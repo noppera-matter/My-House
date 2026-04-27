@@ -868,6 +868,29 @@ function formatApiDate(str) {
 // ========== Service Worker ==========
 function registerSW() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('SW ok')).catch(e => console.warn('SW fail:', e));
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log('SW ok');
+            // 새 SW가 대기 중이면 즉시 활성화
+            reg.addEventListener('updatefound', () => {
+                const newSW = reg.installing;
+                newSW.addEventListener('statechange', () => {
+                    if (newSW.state === 'activated') {
+                        console.log('SW updated - reloading');
+                        window.location.reload();
+                    }
+                });
+            });
+            // 페이지 열 때마다 업데이트 체크
+            reg.update();
+        }).catch(e => console.warn('SW fail:', e));
+
+        // 탭 다시 포커스될 때 업데이트 확인
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                navigator.serviceWorker.getRegistration().then(reg => {
+                    if (reg) reg.update();
+                });
+            }
+        });
     }
 }
