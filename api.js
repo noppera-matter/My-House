@@ -269,7 +269,8 @@ const API = (() => {
 
     // ========== 주소 검색 (VWorld - 한국 전용 초고속 검색) ==========
     async function searchLocation(query) {
-        const url = `https://api.vworld.kr/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=8&page=1&query=${encodeURIComponent(query)}&type=place&format=json&errorformat=json&key=CEB52025-E065-364C-9DBA-44880E3B02B8`;
+        const targetUrl = `https://api.vworld.kr/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=8&page=1&query=${encodeURIComponent(query)}&type=place&format=json&errorformat=json&key=CEB52025-E065-364C-9DBA-44880E3B02B8`;
+        const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
         
         const res = await fetch(url);
         if (!res.ok) throw new Error('검색 서버 상태 이상');
