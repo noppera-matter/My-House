@@ -63,7 +63,6 @@ let selectedRegionName = '';
 
 // ========== Initialization ==========
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => { document.getElementById('app').classList.remove('hidden'); }, 2200);
     initMap();
     loadData();
     renderSpotsList();
@@ -76,6 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
     startLocationWatch();
     registerSW();
     initAPIState();
+
+    setTimeout(() => { 
+        const appEl = document.getElementById('app');
+        if (appEl) appEl.classList.remove('hidden'); 
+        if (map) map.invalidateSize(); // 지도 렌더링 폭 파괴 (검은 화면) 버그 완벽 해결
+    }, 2200);
 });
 
 // ========== Map ==========
