@@ -267,21 +267,29 @@ const API = (() => {
         }));
     }
 
-    // ========== 주소 검색 (Nominatim - 무료, 키 불필요) ==========
+    // ========== 주소 검색 (VWorld - 한국 전용 초고속 검색) ==========
     async function searchLocation(query) {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=kr&limit=8&accept-language=ko`;
-        const res = await fetch(url, {
-            headers: { 'Accept': 'application/json' }
-        });
-        if (!res.ok) throw new Error('검색 실패');
+        const url = `https://api.vworld.kr/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=8&page=1&query=${encodeURIComponent(query)}&type=place&format=json&errorformat=json&key=CEB52025-E065-364C-9DBA-44880E3B02B8`;
+        
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('검색 서버 상태 이상');
+        
         const data = await res.json();
-        return data.map(item => ({
-            name: item.display_name,
-            shortName: item.display_name.split(',').slice(0, 3).join(', '),
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-            type: item.type,
-        }));
+        
+        if (data.response.status !== 'OK' || !data.response.result) {
+            return [];
+        }
+        
+        return data.response.result.items.map(item => {
+            const addr = item.address.road || item.address.parcel || item.title;
+            return {
+                name: addr + ` (${item.title})`,
+                shortName: item.title,
+                lat: parseFloat(item.point.y),
+                lng: parseFloat(item.point.x),
+                type: item.category,
+            };
+        });
     }
 
     // ========== Public Interface ==========
