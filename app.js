@@ -58,6 +58,7 @@ let currentDetailSpotId = null, watchId = null, nearbySpotId = null;
 
 // API state
 let currentTrades = [];
+let allSubItems = []; // 청약 정보 캐싱
 let selectedRegionCode = null;
 let selectedRegionName = '';
 
@@ -525,6 +526,9 @@ function bindAPIEvents() {
 
     // Subscription: load + refresh
     document.getElementById('btn-sub-refresh').addEventListener('click', fetchSubscriptionInfo);
+    document.getElementById('sub-region-filter').addEventListener('change', () => {
+        if (allSubItems.length > 0) renderSubscriptionData();
+    });
 
     // Auto-load subscription when tab is clicked
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -739,42 +743,10 @@ async function fetchSubscriptionInfo() {
     try {
         showToast('🏗️ 청약 정보를 불러오는 중...');
         const items = await API.getSubscriptionInfo(1);
-
-        if (items.length === 0) {
-            list.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><p>현재 공개된 분양 정보가 없습니다</p></div>';
-            loading.classList.add('hidden');
-            return;
-        }
-
-        list.innerHTML = items.map(item => `
-            <div class="sub-card">
-                <div class="sub-card-header">
-                    <div class="sub-house-name">${item.houseName}</div>
-                    <span class="sub-badge">${item.houseDtlSecdNm || '분양'}</span>
-                </div>
-                <div class="sub-location">📍 ${item.supplyLocation || item.sido || '위치 미정'}</div>
-                <div class="sub-dates">
-                    <div class="sub-date-item">
-                        <span class="sub-date-label">모집공고일</span>
-                        <span class="sub-date-value">${formatApiDate(item.recruitDate)}</span>
-                    </div>
-                    <div class="sub-date-item">
-                        <span class="sub-date-label">접수시작</span>
-                        <span class="sub-date-value">${formatApiDate(item.applyStartDate)}</span>
-                    </div>
-                    <div class="sub-date-item">
-                        <span class="sub-date-label">접수마감</span>
-                        <span class="sub-date-value">${formatApiDate(item.applyEndDate)}</span>
-                    </div>
-                    <div class="sub-date-item">
-                        <span class="sub-date-label">당첨발표</span>
-                        <span class="sub-date-value">${formatApiDate(item.winnerDate)}</span>
-                    </div>
-                </div>
-                ${item.totalSupply ? `<div class="sub-supply">🏠 총 공급: <strong>${Number(item.totalSupply).toLocaleString()}세대</strong></div>` : ''}
-                ${item.constructor ? `<div class="sub-supply">🔨 시행사: ${item.constructor}</div>` : ''}
-            </div>`).join('');
-
+        allSubItems = items; // 캐싱
+        
+        renderSubscriptionData(); // 필터 적용 렌더링
+        
         loading.classList.add('hidden');
         showToast(`✅ ${items.length}건의 분양 정보 로드 완료`);
 
@@ -783,6 +755,55 @@ async function fetchSubscriptionInfo() {
         list.innerHTML = `<div class="empty-state"><span class="empty-icon">❌</span><p>데이터를 불러올 수 없습니다<br><small>${err.message}</small></p></div>`;
         showToast(`❌ 오류: ${err.message}`);
     }
+}
+
+function renderSubscriptionData() {
+    const list = document.getElementById('sub-list');
+    const regionFilter = document.getElementById('sub-region-filter').value;
+    
+    // 지역 필터링
+    let filtered = allSubItems;
+    if (regionFilter) {
+        filtered = allSubItems.filter(item => {
+            const sido = item.sido || '';
+            const loc = item.supplyLocation || '';
+            return sido.includes(regionFilter) || loc.includes(regionFilter);
+        });
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><p>해당 지역에 공개된 분양 정보가 없습니다</p></div>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(item => `
+        <div class="sub-card">
+            <div class="sub-card-header">
+                <div class="sub-house-name">${item.houseName}</div>
+                <span class="sub-badge">${item.houseDtlSecdNm || '분양'}</span>
+            </div>
+            <div class="sub-location">📍 ${item.supplyLocation || item.sido || '위치 미정'}</div>
+            <div class="sub-dates">
+                <div class="sub-date-item">
+                    <span class="sub-date-label">모집공고일</span>
+                    <span class="sub-date-value">${formatApiDate(item.recruitDate)}</span>
+                </div>
+                <div class="sub-date-item">
+                    <span class="sub-date-label">접수시작</span>
+                    <span class="sub-date-value">${formatApiDate(item.applyStartDate)}</span>
+                </div>
+                <div class="sub-date-item">
+                    <span class="sub-date-label">접수마감</span>
+                    <span class="sub-date-value">${formatApiDate(item.applyEndDate)}</span>
+                </div>
+                <div class="sub-date-item">
+                    <span class="sub-date-label">당첨발표</span>
+                    <span class="sub-date-value">${formatApiDate(item.winnerDate)}</span>
+                </div>
+            </div>
+            ${item.totalSupply ? `<div class="sub-supply">🏠 총 공급: <strong>${Number(item.totalSupply).toLocaleString()}세대</strong></div>` : ''}
+            ${item.constructor ? `<div class="sub-supply">🔨 시행사: ${item.constructor}</div>` : ''}
+        </div>`).join('');
 }
 
 // ========== Settings Modal ==========

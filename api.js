@@ -27,23 +27,44 @@ const API = (() => {
     }
 
     // ========== Proxy / Fetch ==========
-    // 공공데이터 API는 CORS를 지원하지 않으므로 프록시 필요
-    // 기본: corsproxy.io (무료) / 사용자 변경 가능
-    function getProxyUrl() {
-        const k = getKeys();
-        return k.proxyUrl || 'https://corsproxy.io/?';
+    // 공공데이터 API의 해외 프록시 차단(403) 및 CORS 문제 대응 (자동 폴백 시스템)
+    function getCustomProxy() {
+        return getKeys().proxyUrl || '';
     }
 
     async function apiFetch(url) {
-        const proxyUrl = getProxyUrl();
-        const finalUrl = proxyUrl + encodeURIComponent(url);
-        
-        const res = await fetch(finalUrl, {
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        if (!res.ok) throw new Error(`API 응답 오류: ${res.status}`);
-        return res.json();
+        // 1. 커스텀 프록시가 설정된 경우 우선 사용
+        const customProxy = getCustomProxy();
+        if (customProxy) {
+            const res = await fetch(customProxy + encodeURIComponent(url));
+            if (res.ok) return res.json();
+        }
+
+        // 2. 다이렉트 Fetch (최근 공공데이터 일부 엔드포인트 CORS 허용됨)
+        try {
+            const resDirect = await fetch(url);
+            if (resDirect.ok) return await resDirect.json();
+        } catch (e) {
+            // CORS 에러 시 무시하고 다음 단계로 진행
+        }
+
+        // 3. corsproxy.io 시도
+        try {
+            const resCors = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+            if (resCors.ok) return await resCors.json();
+        } catch (e) {}
+
+        // 4. allorigins.win 시도 (JSONP 방식 활용)
+        try {
+            const resAllUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            const resAll = await fetch(resAllUrl);
+            if (resAll.ok) {
+                const data = await resAll.json();
+                return JSON.parse(data.contents);
+            }
+        } catch (e) {}
+
+        throw new Error('API 서버 접근 차단 또는 CORS 에러. 설정에서 허용된 커스텀 Proxy URL을 입력해주세요.');
     }
 
     // ========== 법정동코드 API ==========
@@ -210,7 +231,7 @@ const API = (() => {
         const url = `https://apis.data.go.kr/1613000/OpenStanReginInfoService/getAPTLttotPblancDetail`
             + `?serviceKey=${key}`
             + `&pageNo=${page}`
-            + `&numOfRows=10`
+            + `&numOfRows=100`
             + `&type=json`;
 
         try {
@@ -246,7 +267,7 @@ const API = (() => {
         const url = `https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail`
             + `?serviceKey=${key}`
             + `&page=${page}`
-            + `&perPage=10`;
+            + `&perPage=100`;
 
         const data = await apiFetch(url);
         const items = data?.data;
