@@ -275,13 +275,13 @@ html, body {
 
 .leaflet-tile-pane { filter: brightness(0.7) saturate(0.8) hue-rotate(10deg); }
 
-/* Map Search Bar */
+/* Map Search Bar - 독립 고정 레이어 */
 #map-search-bar {
-    position: absolute;
-    top: 14px;
+    position: fixed;
+    top: calc(var(--header-height) + 10px);
     left: 14px;
-    right: 62px;
-    z-index: 500;
+    right: 14px;
+    z-index: 900;
 }
 
 .map-search-input-wrap {
@@ -412,7 +412,7 @@ html, body {
 /* Map Overlay Buttons */
 #map-overlay {
     position: absolute;
-    top: 12px;
+    top: 60px;
     right: 12px;
     z-index: 500;
     display: flex;
@@ -1672,6 +1672,9 @@ html, body {
     #app-header {
         padding-top: env(safe-area-inset-top);
         height: calc(var(--header-height) + env(safe-area-inset-top));
+    }
+    #map-search-bar {
+        top: calc(var(--header-height) + env(safe-area-inset-top) + 10px);
     }
     #map-container {
         top: calc(var(--header-height) + env(safe-area-inset-top));
