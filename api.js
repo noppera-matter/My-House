@@ -320,7 +320,7 @@ const API = (() => {
         saveKeys,
         hasKeys,
         getServiceKey,
-        getProxyUrl,
+        getCustomProxy,
         searchRegion,
         searchLocation,
         POPULAR_REGIONS,

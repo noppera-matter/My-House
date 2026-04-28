@@ -64,24 +64,30 @@ let selectedRegionName = '';
 
 // ========== Initialization ==========
 document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    loadData();
-    renderSpotsList();
-    renderChecklist();
-    renderCards();
-    updateBadges();
-    bindEvents();
-    bindAPIEvents();
-    bindMapSearchEvents();
-    startLocationWatch();
-    registerSW();
-    initAPIState();
+    try {
+        initMap();
+        loadData();
+        renderSpotsList();
+        renderChecklist();
+        renderCards();
+        updateBadges();
+        bindEvents();
+        bindAPIEvents();
+        bindMapSearchEvents();
+        startLocationWatch();
+        // registerSW(); // Disabled to fix reload loops and SW cache issues during debug
+        initAPIState();
 
-    setTimeout(() => { 
-        const appEl = document.getElementById('app');
-        if (appEl) appEl.classList.remove('hidden'); 
-        if (map) map.invalidateSize(); // 지도 렌더링 폭 파괴 (검은 화면) 버그 완벽 해결
-    }, 2200);
+        setTimeout(() => { 
+            const appEl = document.getElementById('app');
+            if (appEl) appEl.classList.remove('hidden'); 
+            if (map) map.invalidateSize(); // 지도 렌더링 폭 파괴 (검은 화면) 버그 완벽 해결
+        }, 2200);
+    } catch(err) {
+        console.error('Initialization error:', err);
+        // Force show UI even if error happens
+        document.getElementById('app').classList.remove('hidden');
+    }
 });
 
 // ========== Map ==========
@@ -904,8 +910,8 @@ function registerSW() {
                 const newSW = reg.installing;
                 newSW.addEventListener('statechange', () => {
                     if (newSW.state === 'activated') {
-                        console.log('SW updated - reloading');
-                        window.location.reload();
+                        console.log('SW updated to new version');
+                        // removed window.location.reload() to prevent endless loop on some setups
                     }
                 });
             });
@@ -915,7 +921,7 @@ function registerSW() {
 
         // 탭 다시 포커스될 때 업데이트 확인
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
+            if (!document.hidden && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.getRegistration().then(reg => {
                     if (reg) reg.update();
                 });
