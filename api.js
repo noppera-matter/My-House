@@ -33,38 +33,59 @@ const API = (() => {
     }
 
     async function apiFetch(url) {
-        // 1. 커스텀 프록시가 설정된 경우 우선 사용
+        async function fetchParse(u, isJsonp = false) {
+            const res = await fetch(u);
+            let text = await res.text();
+            if (isJsonp) {
+                try {
+                    const jsonObj = JSON.parse(text);
+                    text = jsonObj.contents;
+                } catch(e) {}
+            }
+            if (!text) throw new Error('빈 응답값을 받았습니다.');
+            
+            // 공공 API XML 에러 응답 처리
+            if (text.trim().startsWith('<')) {
+                const em = text.match(/<errMsg>(.*?)<\/errMsg>/) || 
+                           text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/) || 
+                           text.match(/<originalMessage>(.*?)<\/originalMessage>/) ||
+                           text.match(/<errMsg>(.*)$/i) || text.match(/<resultMsg>(.*?)<\/resultMsg>/);
+                const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다. (XML 오류 응답)';
+                throw new Error(`API에러: ${msg}`);
+            }
+            
+            return JSON.parse(text);
+        }
+
         const customProxy = getCustomProxy();
         if (customProxy) {
-            const res = await fetch(customProxy + encodeURIComponent(url));
-            if (res.ok) return res.json();
+            try { return await fetchParse(customProxy + encodeURIComponent(url)); }
+            catch (e) { throw e; }
         }
 
-        // 2. 다이렉트 Fetch (최근 공공데이터 일부 엔드포인트 CORS 허용됨)
-        try {
-            const resDirect = await fetch(url);
-            if (resDirect.ok) return await resDirect.json();
-        } catch (e) {
-            // CORS 에러 시 무시하고 다음 단계로 진행
+        let lastErr;
+        // 1. 다이렉트
+        try { return await fetchParse(url); } 
+        catch (e) { 
+            if (e.message.startsWith('API에러:')) throw e; 
+            lastErr = e; 
         }
 
-        // 3. corsproxy.io 시도
-        try {
-            const resCors = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
-            if (resCors.ok) return await resCors.json();
-        } catch (e) {}
+        // 2. corsproxy.io
+        try { return await fetchParse('https://corsproxy.io/?' + encodeURIComponent(url)); } 
+        catch (e) { 
+            if (e.message.startsWith('API에러:')) throw e; 
+            lastErr = e; 
+        }
 
-        // 4. allorigins.win 시도 (JSONP 방식 활용)
-        try {
-            const resAllUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-            const resAll = await fetch(resAllUrl);
-            if (resAll.ok) {
-                const data = await resAll.json();
-                return JSON.parse(data.contents);
-            }
-        } catch (e) {}
+        // 3. allorigins.win
+        try { return await fetchParse(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, true); } 
+        catch (e) { 
+            if (e.message.startsWith('API에러:')) throw e; 
+            lastErr = e; 
+        }
 
-        throw new Error('API 서버 접근 차단 또는 CORS 에러. 설정에서 허용된 커스텀 Proxy URL을 입력해주세요.');
+        throw new Error('API 서버 네트워크 에러 또는 차단. 프록시도 실패했습니다.');
     }
 
     // ========== 법정동코드 API ==========
