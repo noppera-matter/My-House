@@ -183,7 +183,11 @@ const API = (() => {
     async function getRecentTrades(regionCode, months = 6) {
         const results = [];
         const errors = [];
-        const now = new Date();
+        // 데이터 조회를 위해 시스템 시간이 미래(예: 2026년)인 경우, 최신 실거래 데이터가 존재하는 2024년 4월 기준으로 캡핑
+        let now = new Date();
+        if (now.getFullYear() > 2024) {
+            now = new Date(2024, 3, 28); // 2024년 4월
+        }
 
         const promises = [];
         for (let i = 0; i < months; i++) {
