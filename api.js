@@ -23,7 +23,12 @@ const API = (() => {
     }
 
     function getServiceKey() {
-        return getKeys().serviceKey || '';
+        let k = getKeys().serviceKey || '';
+        // 디코딩 키(+, = 포함)가 입력되었지만 인코딩되지 않은 상태라면 자동으로 인코딩 처리
+        if (k && !k.includes('%') && (k.includes('+') || k.includes('='))) {
+            k = encodeURIComponent(k);
+        }
+        return k;
     }
 
     // ========== Proxy / Fetch ==========
@@ -50,14 +55,32 @@ const API = (() => {
                 throw new Error('PROXY_HTML_BLOCKED');
             }
             
-            // 공공 API XML 에러 응답 처리 (HTML이 아닌 순수 XML)
+            // 공공 API XML 응답 처리
             if (text.trim().startsWith('<')) {
-                const em = text.match(/<errMsg>(.*?)<\/errMsg>/) || 
-                           text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/) || 
-                           text.match(/<originalMessage>(.*?)<\/originalMessage>/) ||
-                           text.match(/<errMsg>(.*)$/i) || text.match(/<resultMsg>(.*?)<\/resultMsg>/);
-                const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다.';
-                throw new Error(`API에러: ${msg}`);
+                // 실제 에러인지 확인
+                const isError = text.includes('<errMsg>') || text.includes('<returnAuthMsg>') || text.includes('SERVICE ERROR') || text.includes('<resultCode>99</resultCode>');
+                if (isError) {
+                    const em = text.match(/<errMsg>(.*?)<\/errMsg>/) || 
+                               text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/) || 
+                               text.match(/<originalMessage>(.*?)<\/originalMessage>/);
+                    const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다. (API 관리자 페이지를 확인하세요)';
+                    throw new Error(`API에러: ${msg}`);
+                }
+
+                // 정상적인 XML 응답 (XML을 JSON 형태로 변환)
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(text, "text/xml");
+                const items = xmlDoc.querySelectorAll('item');
+
+                const resultItems = Array.from(items).map(itemNode => {
+                    const obj = {};
+                    for (const child of itemNode.children) {
+                        obj[child.tagName] = child.textContent;
+                    }
+                    return obj;
+                });
+                
+                return { response: { body: { items: { item: resultItems } } } };
             }
             
             return JSON.parse(text);
