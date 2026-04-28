@@ -44,13 +44,19 @@ const API = (() => {
             }
             if (!text) throw new Error('빈 응답값을 받았습니다.');
             
-            // 공공 API XML 에러 응답 처리
+            // HTML 응답 필터링 (프록시 차단 등)
+            const lowerText = text.trim().toLowerCase();
+            if (lowerText.startsWith('<!doctype') || lowerText.startsWith('<html')) {
+                throw new Error('PROXY_HTML_BLOCKED');
+            }
+            
+            // 공공 API XML 에러 응답 처리 (HTML이 아닌 순수 XML)
             if (text.trim().startsWith('<')) {
                 const em = text.match(/<errMsg>(.*?)<\/errMsg>/) || 
                            text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/) || 
                            text.match(/<originalMessage>(.*?)<\/originalMessage>/) ||
                            text.match(/<errMsg>(.*)$/i) || text.match(/<resultMsg>(.*?)<\/resultMsg>/);
-                const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다. (XML 오류 응답)';
+                const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다.';
                 throw new Error(`API에러: ${msg}`);
             }
             
@@ -85,7 +91,8 @@ const API = (() => {
             lastErr = e; 
         }
 
-        throw new Error('API 서버 네트워크 에러 또는 차단. 프록시도 실패했습니다.');
+        // 모든 수단 실패 시
+        throw new Error('API 키 인증 실패(승인대기/권한없음) 혹은 공공서버 차단 (프록시 우회 불가)');
     }
 
     // ========== 법정동코드 API ==========
@@ -151,7 +158,7 @@ const API = (() => {
         const key = getServiceKey();
         if (!key) throw new Error('API 키가 설정되지 않았습니다. ⚙️ 설정에서 입력해 주세요.');
 
-        const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev`
+        const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade`
             + `?serviceKey=${key}`
             + `&LAWD_CD=${regionCode}`
             + `&DEAL_YMD=${dealYearMonth}`
