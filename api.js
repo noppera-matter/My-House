@@ -31,91 +31,66 @@ const API = (() => {
         return k;
     }
 
-    // ========== Proxy / Fetch ==========
-    // 공공데이터 API의 해외 프록시 차단(403) 및 CORS 문제 대응 (자동 폴백 시스템)
+    // ========== Fetch ==========
+    // 공공데이터 API는 CORS를 지원하므로 프록시 없이 직접 호출이 가능합니다.
     function getCustomProxy() {
         return getKeys().proxyUrl || '';
     }
 
     async function apiFetch(url) {
-        async function fetchParse(u, isJsonp = false) {
-            const res = await fetch(u);
-            let text = await res.text();
-            if (isJsonp) {
-                try {
-                    const jsonObj = JSON.parse(text);
-                    text = jsonObj.contents;
-                } catch(e) {}
+        let res;
+        try {
+            res = await fetch(url);
+        } catch (e) {
+            throw new Error('네트워크 오류 또는 공공데이터 서버 응답 지연입니다.');
+        }
+
+        let text = await res.text();
+        if (!text) throw new Error('빈 응답값을 받았습니다.');
+        
+        // 공공 API XML 응답 또는 HTML 에러 페이지 처리
+        const lowerText = text.trim().toLowerCase();
+        if (lowerText.startsWith('<!doctype') || lowerText.startsWith('<html')) {
+            throw new Error('API에러: 공공데이터 포털 서버에서 일시적인 HTML 에러 페이지를 반환했습니다.');
+        }
+        
+        if (text.trim().startsWith('<')) {
+            // 실제 에러인지 확인
+            const isError = !res.ok || text.includes('<errMsg>') || text.includes('<returnAuthMsg>') || text.includes('SERVICE ERROR') || text.includes('<resultCode>99</resultCode>');
+            if (isError) {
+                const em = text.match(/<errMsg>(.*?)<\/errMsg>/) || 
+                           text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/) || 
+                           text.match(/<originalMessage>(.*?)<\/originalMessage>/);
+                const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다. (API 관리자 페이지를 확인하세요)';
+                throw new Error(`API에러: ${msg}`);
             }
-            if (!text) throw new Error('빈 응답값을 받았습니다.');
-            
-            // HTML 응답 필터링 (프록시 차단 등)
-            const lowerText = text.trim().toLowerCase();
-            if (lowerText.startsWith('<!doctype') || lowerText.startsWith('<html')) {
-                throw new Error('PROXY_HTML_BLOCKED');
-            }
-            
-            // 공공 API XML 응답 처리
-            if (text.trim().startsWith('<')) {
-                // 실제 에러인지 확인
-                const isError = text.includes('<errMsg>') || text.includes('<returnAuthMsg>') || text.includes('SERVICE ERROR') || text.includes('<resultCode>99</resultCode>');
-                if (isError) {
-                    const em = text.match(/<errMsg>(.*?)<\/errMsg>/) || 
-                               text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/) || 
-                               text.match(/<originalMessage>(.*?)<\/originalMessage>/);
-                    const msg = em ? em[1].trim() : '잘못된 API 키이거나 권한이 없습니다. (API 관리자 페이지를 확인하세요)';
-                    throw new Error(`API에러: ${msg}`);
+
+            // 정상적인 XML 응답 (XML을 JSON 형태로 변환)
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "text/xml");
+            const items = xmlDoc.querySelectorAll('item');
+
+            const resultItems = Array.from(items).map(itemNode => {
+                const obj = {};
+                for (const child of itemNode.children) {
+                    obj[child.tagName] = child.textContent;
                 }
-
-                // 정상적인 XML 응답 (XML을 JSON 형태로 변환)
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(text, "text/xml");
-                const items = xmlDoc.querySelectorAll('item');
-
-                const resultItems = Array.from(items).map(itemNode => {
-                    const obj = {};
-                    for (const child of itemNode.children) {
-                        obj[child.tagName] = child.textContent;
-                    }
-                    return obj;
-                });
-                
-                return { response: { body: { items: { item: resultItems } } } };
-            }
+                return obj;
+            });
             
+            return { response: { body: { items: { item: resultItems } } } };
+        }
+        
+        // JSON 응답인 경우
+        if (!res.ok) {
+            throw new Error(`API에러: HTTP ${res.status} - 키가 유효하지 않거나 권한이 없습니다.`);
+        }
+        
+        try {
             return JSON.parse(text);
+        } catch (e) {
+            throw new Error('API 응답 파싱 실패 (JSON 포맷이 아님)');
         }
-
-        const customProxy = getCustomProxy();
-        if (customProxy) {
-            try { return await fetchParse(customProxy + encodeURIComponent(url)); }
-            catch (e) { throw e; }
-        }
-
-        let lastErr;
-        // 1. 다이렉트
-        try { return await fetchParse(url); } 
-        catch (e) { 
-            if (e.message.startsWith('API에러:')) throw e; 
-            lastErr = e; 
-        }
-
-        // 2. corsproxy.io
-        try { return await fetchParse('https://corsproxy.io/?' + encodeURIComponent(url)); } 
-        catch (e) { 
-            if (e.message.startsWith('API에러:')) throw e; 
-            lastErr = e; 
-        }
-
-        // 3. allorigins.win
-        try { return await fetchParse(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, true); } 
-        catch (e) { 
-            if (e.message.startsWith('API에러:')) throw e; 
-            lastErr = e; 
-        }
-
-        // 모든 수단 실패 시
-        throw new Error('API 키 인증 실패(승인대기/권한없음) 혹은 공공서버 차단 (프록시 우회 불가)');
     }
 
     // ========== 법정동코드 API ==========
@@ -344,28 +319,44 @@ const API = (() => {
     }
 
     // ========== 주소 검색 (VWorld - 한국 전용 초고속 검색) ==========
-    async function searchLocation(query) {
-        const targetUrl = `https://api.vworld.kr/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=8&page=1&query=${encodeURIComponent(query)}&type=place&format=json&errorformat=json&key=CEB52025-E065-364C-9DBA-44880E3B02B8`;
-        const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
-        
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('검색 서버 상태 이상');
-        
-        const data = await res.json();
-        
-        if (data.response.status !== 'OK' || !data.response.result) {
-            return [];
-        }
-        
-        return data.response.result.items.map(item => {
-            const addr = item.address.road || item.address.parcel || item.title;
-            return {
-                name: addr + ` (${item.title})`,
-                shortName: item.title,
-                lat: parseFloat(item.point.y),
-                lng: parseFloat(item.point.x),
-                type: item.category,
+    // VWorld API는 JSONP를 지원하므로 CORS 문제 없이 즉시 호출 가능
+    function searchLocation(query) {
+        return new Promise((resolve, reject) => {
+            const callbackName = 'vworld_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            const targetUrl = `https://api.vworld.kr/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=8&page=1&query=${encodeURIComponent(query)}&type=place&format=jsonp&callback=${callbackName}&errorformat=jsonp&key=CEB52025-E065-364C-9DBA-44880E3B02B8`;
+            
+            const script = document.createElement('script');
+            script.src = targetUrl;
+            
+            window[callbackName] = function(data) {
+                delete window[callbackName];
+                document.head.removeChild(script);
+                
+                if (data.response.status !== 'OK' || !data.response.result) {
+                    resolve([]);
+                    return;
+                }
+                
+                const items = data.response.result.items.map(item => {
+                    const addr = item.address.road || item.address.parcel || item.title;
+                    return {
+                        name: addr + ` (${item.title})`,
+                        shortName: item.title,
+                        lat: parseFloat(item.point.y),
+                        lng: parseFloat(item.point.x),
+                        type: item.category,
+                    };
+                });
+                resolve(items);
             };
+            
+            script.onerror = function() {
+                delete window[callbackName];
+                document.head.removeChild(script);
+                reject(new Error('검색 서버 상태 이상'));
+            };
+            
+            document.head.appendChild(script);
         });
     }
 
